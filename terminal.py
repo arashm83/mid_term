@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-
+import shlex
 
 
 class FilesystemObject(ABC):
@@ -70,13 +70,19 @@ class FileSystem:
         elif path.startswith('/'):
             current_dir = self.root
         child_name = path.strip('/').split('/')[0]
+        new_path = '/'.join(path.strip('/').split('/')[1:])
+        if child_name == '..':
+                return self.find_dir(new_path,current_dir.parent)
         for child in current_dir.children:
             if child.name == child_name and isinstance(child, Directory):
-                new_path = '/'.join(path.strip('/').split('/')[1:])
                 return self.find_dir(new_path, child)
+            
         raise Exception('Directory not found')
         
     def change_directory(self, path: str):
+        if path =='..':
+            self.current_dir = self.current_dir.parent
+            return True
         try:
             Directory = self.find_dir(path)
             self.current_dir = Directory
@@ -92,6 +98,16 @@ class FileSystem:
         dir = self.find_dir(path)
         file = TextFile(name, dir)
         dir.children.append(file)
+
+    def copy(self, path):
+        pass
+
+    def show_directory(self, path=None):
+        if path:
+            directory = self.find_dir(path)
+        else:
+            directory = self.current_dir
+        print('\t'.join(child.name for child in directory.children))
         
 
         
@@ -99,17 +115,31 @@ f = FileSystem()
 f.make_directory(name= 'downloads')
 f.make_directory(name= 'pictures')
 f.change_directory('/pictures')
-print(f.current_dir.name)
 f.make_directory('camera')
 f.change_directory('/')
-print(f.current_dir.name)
 f.make_directory(name = 'documents')
 f.change_directory('/pictures/camera')
-print(f.current_dir.name)
 f.make_directory('screenshots', '/pictures')
 f.make_file(f.current_dir.path, 'file1.txt')
+f.change_directory('/')
 
-l1 = [d.name for d in f.root.children]
-l2 = [d.name for d in f.current_dir.children]
-print(l1)
-print(l2)
+if __name__=="__main__":
+    while True:
+        
+        com = shlex.split(input('$ '))
+        try:
+            match com[0]:
+                case 'mkdir':
+                    f.make_directory(*com[1:])
+                case 'cd':
+                    f.change_directory(com[1])
+                case 'touch':
+                    f.make_file(*com[1:])
+                case 'rm':
+                    f.remove(com[1])
+                case 'ls':
+                    f.show_directory(*com[1:])
+                case _:
+                    print('command not found')
+        except Exception as e:
+            print(e)
