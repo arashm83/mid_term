@@ -57,10 +57,10 @@ class FileSystem:
         self.path = []
 
     def make_directory(self,name, path: str = None):
-        target_directory = self.find_dir(path)
+        target_directory = self.find(path)
         target_directory.children.append(Directory(name, target_directory))
 
-    def find_dir(self, path: str = None, current_dir = None)-> Directory:
+    def find(self, path: str = None, current_dir = None)-> Directory:
         if not current_dir:
             current_dir = self.current_dir
         if not path:
@@ -72,10 +72,10 @@ class FileSystem:
         child_name = path.strip('/').split('/')[0]
         new_path = '/'.join(path.strip('/').split('/')[1:])
         if child_name == '..':
-                return self.find_dir(new_path,current_dir.parent)
+                return self.find(new_path,current_dir.parent)
         for child in current_dir.children:
-            if child.name == child_name and isinstance(child, Directory):
-                return self.find_dir(new_path, child)
+            if child.name == child_name and isinstance(child, FilesystemObject):
+                return self.find(new_path, child)
             
         raise Exception('Directory not found')
         
@@ -84,30 +84,50 @@ class FileSystem:
             self.current_dir = self.current_dir.parent
             return True
         try:
-            Directory = self.find_dir(path)
-            self.current_dir = Directory
-            return True
+            directory = self.find(path)
+            assert isinstance(directory, Directory)
+            self.current_dir = directory
+            
         except :
             raise Exception('Directory not found')
         
     def remove(self, path):
-        file = self.find_dir(path)
+        file = self.find(path)
         file.parent.children.remove(file)
 
     def make_file(self, path, name):
-        dir = self.find_dir(path)
+        dir = self.find(path)
         file = TextFile(name, dir)
         dir.children.append(file)
 
-    def copy(self, path):
-        pass
+    def move(self, path, new_path):
+        obj = self.find(path)
+        parent = self.find(new_path)
+        obj.parent.children.remove(obj)
+        parent.children.append(obj)
+
+    def copy(self, path, path_to_copy):
+        object_to_copy = self.find(path)
+        parent_to_copy = self.find(path_to_copy)
+        if isinstance(object_to_copy, Directory):
+            new_dir = Directory(object_to_copy.name, parent_to_copy)
+            parent_to_copy.children.append(new_dir)
+            for child in object_to_copy.children:
+                self.copy(object_to_copy.path + '/' + child.name, new_dir.path)
+        elif isinstance(object_to_copy, TextFile):
+            new_file = TextFile(object_to_copy.name, parent_to_copy)
+            new_file.content = object_to_copy.content.copy()
+            parent_to_copy.children.append(new_file)
+
 
     def show_directory(self, path=None):
         if path:
-            directory = self.find_dir(path)
+            directory = self.find(path)
         else:
             directory = self.current_dir
         print('\t'.join(child.name for child in directory.children))
+
+
         
 
         
@@ -125,8 +145,10 @@ f.change_directory('/')
 
 if __name__=="__main__":
     while True:
-        
-        com = shlex.split(input('$ '))
+        try:
+            com = shlex.split(input('$ '))
+        except:
+            print('invalid input')
         try:
             match com[0]:
                 case 'mkdir':
@@ -139,6 +161,8 @@ if __name__=="__main__":
                     f.remove(com[1])
                 case 'ls':
                     f.show_directory(*com[1:])
+                case 'mv':
+                    f.move(*com[1:])
                 case _:
                     print('command not found')
         except Exception as e:
