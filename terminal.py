@@ -2,9 +2,8 @@ from abc import ABC, abstractmethod
 import shlex
 from pickle import dump, load
 
+
 BLUE = '\033[94m'
-RED = '\033[91m'
-GREEN = '\033[92m'
 END = '\033[0m'
 
 class DataManager:
@@ -22,6 +21,7 @@ class DataManager:
     def save_files(root):
         with open('files.pkl', 'wb') as f:
             dump(root, f)
+
 
 class FilesystemObject(ABC):
     def __init__(self, name, parent):
@@ -97,7 +97,6 @@ class FileSystem:
         for child in current_dir.children:
             if child.name == child_name and isinstance(child, FilesystemObject):
                 return self.find(new_path, child)
-            
         raise Exception('Directory not found')
         
     def change_directory(self, path: str):
@@ -108,7 +107,6 @@ class FileSystem:
             directory = self.find(path)
             assert isinstance(directory, Directory)
             self.current_dir = directory
-            
         except :
             raise Exception('Directory not found')
         
@@ -144,7 +142,6 @@ class FileSystem:
     def where_am_i(self):
         print(self.current_dir.path or 'root')
 
-
     def show_directory(self, path=None):
         if path:
             directory = self.find(path)
@@ -154,6 +151,8 @@ class FileSystem:
         output = map(lambda child: BLUE + child.name + END if isinstance(child, Directory)\
                     else child.name, directory.children)
         print('   '.join(output))
+
+
 if __name__=="__main__":
     
     f = FileSystem()
