@@ -1,6 +1,27 @@
 from abc import ABC, abstractmethod
 import shlex
+from pickle import dump, load
 
+BLUE = '\033[94m'
+RED = '\033[91m'
+GREEN = '\033[92m'
+END = '\033[0m'
+
+class DataManager:
+
+    @staticmethod
+    def load_files():
+        try :
+            with open('files.pkl', 'rb') as f:
+                root = load(f)
+                return root
+        except FileNotFoundError:
+            return None
+
+    @staticmethod
+    def save_files(root):
+        with open('files.pkl', 'wb') as f:
+            dump(root, f)
 
 class FilesystemObject(ABC):
     def __init__(self, name, parent):
@@ -52,7 +73,7 @@ class TextFile(FilesystemObject):
 
 class FileSystem:
     def __init__(self):
-        self.root = Directory('/', None)
+        self.root = DataManager.load_files() or Directory('/', None)
         self.current_dir = self.root
         self.path = []
 
@@ -95,7 +116,7 @@ class FileSystem:
         file = self.find(path)
         file.parent.children.remove(file)
 
-    def make_file(self, path, name):
+    def make_file(self,name, path = None):
         dir = self.find(path)
         file = TextFile(name, dir)
         dir.children.append(file)
@@ -104,6 +125,7 @@ class FileSystem:
         obj = self.find(path)
         parent = self.find(new_path)
         obj.parent.children.remove(obj)
+        obj.parent = parent
         parent.children.append(obj)
 
     def copy(self, path, path_to_copy):
@@ -119,31 +141,22 @@ class FileSystem:
             new_file.content = object_to_copy.content.copy()
             parent_to_copy.children.append(new_file)
 
+    def where_am_i(self):
+        print(self.current_dir.path or 'root')
+
 
     def show_directory(self, path=None):
         if path:
             directory = self.find(path)
         else:
             directory = self.current_dir
-        print('\t'.join(child.name for child in directory.children))
-
-
         
-
-        
-f = FileSystem()
-f.make_directory(name= 'downloads')
-f.make_directory(name= 'pictures')
-f.change_directory('/pictures')
-f.make_directory('camera')
-f.change_directory('/')
-f.make_directory(name = 'documents')
-f.change_directory('/pictures/camera')
-f.make_directory('screenshots', '/pictures')
-f.make_file(f.current_dir.path, 'file1.txt')
-f.change_directory('/')
-
+        output = map(lambda child: BLUE + child.name + END if isinstance(child, Directory)\
+                    else child.name, directory.children)
+        print('   '.join(output))
 if __name__=="__main__":
+    
+    f = FileSystem()
     while True:
         try:
             com = shlex.split(input('$ '))
@@ -163,6 +176,13 @@ if __name__=="__main__":
                     f.show_directory(*com[1:])
                 case 'mv':
                     f.move(*com[1:])
+                case 'cp':
+                    f.copy(*com[1:])
+                case 'pwd':
+                    f.where_am_i()
+                case 'exit':
+                    DataManager.save_files(f.root)
+                    break
                 case _:
                     print('command not found')
         except Exception as e:
