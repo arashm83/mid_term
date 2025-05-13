@@ -32,10 +32,17 @@ class FilesystemObject(ABC):
     def name(self):
         return self._name
     
+    @name.setter
+    def name(self, val):
+        self._name = val
+    
     @property
     def parent(self):
         return self._parent
-
+    
+    @parent.setter
+    def parent(self, val):
+        self._parent = val
 
 class Directory(FilesystemObject):
     def __init__(self, name, parent):
@@ -62,13 +69,31 @@ class TextFile(FilesystemObject):
         self.content = []
 
     def read(self):
-        return '\n'.join(self.content)
+        print('\n'.join(self.content))
     
     def write_line(self, val):
         self.content.append(val)
 
     def write(self, val):
         self.content[-1] += val
+
+    def delete_line(self, l):
+        if l > 0:
+            try :
+                self.content.pop(l-1)
+            except IndexError:
+                raise IndexError('line doesn\'t exist')
+        else:
+            raise IndexError('line must be a positive number')
+        
+    def edit_line(self, l, value):
+        if l > 0:
+            try :
+                self.content[l-1] = value
+            except IndexError:
+                raise IndexError('line doesn\'t exist')
+        else:
+            raise IndexError('line must be a positive number')
 
 
 class FileSystem:
@@ -151,14 +176,37 @@ class FileSystem:
         output = map(lambda child: BLUE + child.name + END if isinstance(child, Directory)\
                     else child.name, directory.children)
         print('   '.join(output))
+        
+    def cat_file(self, path):
+        file = self.find(path)
+        file.read()
 
+    def append_text(self, path, line):
+        file = self.find(path)
+        file.write_line(line)
+
+    def delete_line(self, path, l):
+        try:
+            l = int(l)
+            file = self.find(path)
+            file.delete_line(l)
+        except ValueError:
+            raise ValueError('line must be a positive number')
+        
+    def edit_line(self, path, line, text):
+        file = self.find(path)
+        try:
+            line = int(line)
+        except ValueError:
+            raise ValueError('line must be a positive number')
+        file.edit_line(line, text)
 
 if __name__=="__main__":
     
     f = FileSystem()
     while True:
         try:
-            com = shlex.split(input('$ '))
+            com = shlex.split(input(f'{f.current_dir.path} $ '))
         except:
             print('invalid input')
         try:
@@ -166,7 +214,10 @@ if __name__=="__main__":
                 case 'mkdir':
                     f.make_directory(*com[1:])
                 case 'cd':
-                    f.change_directory(com[1])
+                    if len(com) > 1:
+                        f.change_directory(com[1])
+                    else:
+                        f.change_directory('/')
                 case 'touch':
                     f.make_file(*com[1:])
                 case 'rm':
@@ -179,10 +230,25 @@ if __name__=="__main__":
                     f.copy(*com[1:])
                 case 'pwd':
                     f.where_am_i()
+                case 'cat':
+                    f.cat_file(com[1])
+                case 'appendtxt':
+                    line = input('>> ')
+                    f.append_text(com[1], line)
+                case 'editline':
+                    text = input('>> ')
+                    f.edit_line(*com[1:], text)
+                case 'deline':
+                    f.delete_line(*com[1:])
                 case 'exit':
                     DataManager.save_files(f.root)
                     break
                 case _:
                     print('command not found')
+        except TypeError as e:
+            print('missing name or path')
+        except KeyboardInterrupt:
+            DataManager.save_files(f.root)
         except Exception as e:
             print(e)
+        
