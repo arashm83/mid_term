@@ -6,6 +6,17 @@ from pickle import dump, load
 BLUE = '\033[94m'
 END = '\033[0m'
 
+def singleton(cls):
+    instances = {}
+
+    def wrapper(*args, **kwargs):
+        if cls not in instances:
+            instances[cls] = cls(*args, **kwargs)
+        return instances[cls]
+
+    return wrapper
+
+
 class DataManager:
 
     @staticmethod
@@ -96,6 +107,7 @@ class TextFile(FilesystemObject):
             raise IndexError('line must be a positive number')
 
 
+@singleton
 class FileSystem:
     def __init__(self):
         self.root = DataManager.load_files() or Directory('/', None)
