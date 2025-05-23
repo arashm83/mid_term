@@ -86,7 +86,10 @@ class TextFile(FilesystemObject):
         self.content.append(val)
 
     def write(self, val):
-        self.content[-1] += val
+        if self.content:
+            self.content[-1] += val
+        else:
+            self.content.append(val)
 
     def delete_line(self, l):
         if l > 0:
@@ -115,10 +118,10 @@ class FileSystem:
         self.path = []
 
     def make_directory(self,name, path: str = None):
-        target_directory = self.find(path)
+        target_directory = self._find(path)
         target_directory.children.append(Directory(name, target_directory))
 
-    def find(self, path: str = None, current_dir = None)-> Directory:
+    def _find(self, path: str = None, current_dir = None)-> Directory:
         if not current_dir:
             current_dir = self.current_dir
         if not path:
@@ -130,10 +133,10 @@ class FileSystem:
         child_name = path.strip('/').split('/')[0]
         new_path = '/'.join(path.strip('/').split('/')[1:])
         if child_name == '..':
-                return self.find(new_path,current_dir.parent)
+                return self._find(new_path,current_dir.parent)
         for child in current_dir.children:
             if child.name == child_name and isinstance(child, FilesystemObject):
-                return self.find(new_path, child)
+                return self._find(new_path, child)
         raise Exception('Directory not found')
         
     def change_directory(self, path: str):
@@ -141,31 +144,31 @@ class FileSystem:
             self.current_dir = self.current_dir.parent
             return True
         try:
-            directory = self.find(path)
+            directory = self._find(path)
             assert isinstance(directory, Directory)
             self.current_dir = directory
         except :
             raise Exception('Directory not found')
         
     def remove(self, path):
-        file = self.find(path)
+        file = self._find(path)
         file.parent.children.remove(file)
 
     def make_file(self,name, path = None):
-        dir = self.find(path)
+        dir = self._find(path)
         file = TextFile(name, dir)
         dir.children.append(file)
 
     def move(self, path, new_path):
-        obj = self.find(path)
-        parent = self.find(new_path)
+        obj = self._find(path)
+        parent = self._find(new_path)
         obj.parent.children.remove(obj)
         obj.parent = parent
         parent.children.append(obj)
 
     def copy(self, path, path_to_copy):
-        object_to_copy = self.find(path)
-        parent_to_copy = self.find(path_to_copy)
+        object_to_copy = self._find(path)
+        parent_to_copy = self._find(path_to_copy)
         if isinstance(object_to_copy, Directory):
             new_dir = Directory(object_to_copy.name, parent_to_copy)
             parent_to_copy.children.append(new_dir)
@@ -181,7 +184,7 @@ class FileSystem:
 
     def show_directory(self, path=None):
         if path:
-            directory = self.find(path)
+            directory = self._find(path)
         else:
             directory = self.current_dir
         
@@ -190,23 +193,23 @@ class FileSystem:
         print('   '.join(output))
         
     def cat_file(self, path):
-        file = self.find(path)
+        file = self._find(path)
         file.read()
 
     def append_text(self, path, line):
-        file = self.find(path)
+        file = self._find(path)
         file.write_line(line)
 
     def delete_line(self, path, l):
         try:
             l = int(l)
-            file = self.find(path)
+            file = self._find(path)
             file.delete_line(l)
         except ValueError:
             raise ValueError('line must be a positive number')
         
     def edit_line(self, path, line, text):
-        file = self.find(path)
+        file = self._find(path)
         try:
             line = int(line)
         except ValueError:
@@ -265,4 +268,3 @@ if __name__=="__main__":
             DataManager.save_files(f.root)
         except Exception as e:
             print(e)
-        
