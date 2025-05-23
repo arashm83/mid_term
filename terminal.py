@@ -246,7 +246,9 @@ if __name__=="__main__":
                     f.cat_file(com[1])
                 case 'appendtxt':
                     line = input('>> ')
-                    f.append_text(com[1], line)
+                    while line != '\\END\\':
+                        f.append_text(com[1], line)
+                        line = input('>> ')
                 case 'editline':
                     text = input('>> ')
                     f.edit_line(*com[1:], text)
