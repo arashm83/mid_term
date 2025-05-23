@@ -137,7 +137,7 @@ class FileSystem:
         for child in current_dir.children:
             if child.name == child_name and isinstance(child, FilesystemObject):
                 return self._find(new_path, child)
-        raise Exception('Directory not found')
+        raise Exception('Path not found')
         
     def change_directory(self, path: str):
         if path =='..':
